@@ -45,6 +45,34 @@ class Grid(private val numbers: Array<Array<Int?>>) {
         y.floorDiv(squareSideLength)
     )
 
+    private fun solveObvious(): Boolean {
+        var modified = false
+        baseNCounter(sideLength, 2)
+            .filter { (x, y) -> numbers[y][x] == null }
+            .forEach { (x, y) ->
+                val possibilities = getPossibilities(x, y)
+                if (possibilities.size == 1) {
+                    val option = possibilities.first()
+                    println("($x, $y) can only be $option")
+                    numbers[y][x] = option
+                    modified = true
+                }
+            }
+        return modified
+    }
+
+    private fun isValid(): Boolean {
+        if ((0..<sideLength)
+                .map { getRow(it).toSet() }
+                .any { it.size != sideLength }) return false
+        if ((0..<sideLength)
+                .map { getColumn(it).toSet() }
+                .any { it.size != sideLength }) return false
+        return baseNCounter(squareSideLength, 2)
+            .map { (x, y) -> getSquare(x, y).toSet() }
+            .all { it.size != sideLength }
+    }
+
     private fun copy(): Grid {
         return Grid(numbers.map { it.copyOf() }.toTypedArray())
     }
@@ -56,5 +84,10 @@ class Grid(private val numbers: Array<Array<Int?>>) {
         getColumn(x).forEach(possibilities::remove)
         getSquareOf(x, y).forEach(possibilities::remove)
         return possibilities
+    }
+
+    fun solve() {
+        while (solveObvious()) { continue }
+        println(this)
     }
 }
