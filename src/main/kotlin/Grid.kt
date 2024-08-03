@@ -1,117 +1,82 @@
-import kotlin.math.sqrt
+class Grid(vararg knownValues: Pair<Pair<Int, Int>, Int>) {
 
-class Grid(private val numbers: Array<Array<Int?>>) {
+    private val possibilities = mutableMapOf<Pair<Int, Int>, MutableList<Int>>()
 
-    private val sideLength by lazy { numbers.size }
-    private val length by lazy { sideLength * sideLength }
-    private val squareSideLength by lazy { sqrt(sideLength.toDouble()).toInt() }
-
-    override fun toString(): String {
-        return numbers
-            .map { row ->
-                row
-                    .joinToString("") { it?.toString() ?: " " }
-                    .chunked(squareSideLength)
-                    .joinToString("|")
-            }
-            .chunked(squareSideLength).joinToString(
-                "\n"
-                        + "-"
-                    .repeat(sideLength)
-                    .chunked(squareSideLength)
-                    .joinToString("+")
-                        + "\n"
-            ) { it.joinToString("\n") }
+    init {
+        knownValues.forEach { (key, value) -> possibilities[key] = mutableListOf(value) }
     }
 
-    operator fun get(column: Int, row: Int) = numbers[row][column]
+    fun getRow(y: Int) = (0..8)
+        .map { it to y }
+        .associateWith { (x, y) -> this[x, y] }
 
-    fun getRow(row: Int) = numbers[row].asSequence()
+    fun getRowDefinite(y: Int) = possibilities.filterKeys { (_, y1) -> y1 == y }
 
-    fun getColumn(column: Int) = numbers.map { it[column] }.asSequence()
+    fun getRows() = (0..8).map { getRow(it) }
 
-    fun getSquare(x: Int, y: Int) = sequence {
-        for (x1 in 0..2) {
-            for (y1 in 0..2) {
-                val x2 = squareSideLength * x + x1
-                val y2 = squareSideLength * y + y1
-                yield(numbers[y2][x2])
+    fun getColumn(x: Int) = (0..8)
+        .map { x to it }
+        .associateWith { (x, y) -> this[x, y] }
+
+    fun getColumnDefinite(x: Int) = possibilities.filterKeys { (x1, _) -> x1 == x }
+
+    fun getColumns() = (0..8).map { getColumn(it) }
+
+    fun getSquare(x: Int, y: Int) = permute(0..2, 0..2)
+        .map { (x1, y1) -> (x * 3 + x1) to (y * 3 + y1) }
+        .associateWith { (x, y) -> this[x, y] }
+
+    fun getSquareDefinite(x: Int, y: Int) = possibilities.filterKeys { (x1, y1) -> x1.floorDiv(3) == x && y1.floorDiv(3) == y }
+
+    fun getSquareOf(x: Int, y: Int) = getSquare(x.floorDiv(3), y.floorDiv(3))
+
+    fun getSquareOfDefinite(x: Int, y: Int) = getSquareDefinite(x.floorDiv(3), y.floorDiv(3))
+
+    fun getSquares() = permute(0..2, 0..2).map { (x, y) -> getSquare(x, y) }
+
+    private fun getCollections() = getRows() + getColumns() + getSquares()
+
+    private fun MutableList<Int>.removeDefinite(values: Iterable<Iterable<Int>>) {
+        this.removeAll(values
+            .filter { it.count() == 1 }
+            .map { it.first() }
+        )
+    }
+
+    private fun <T> MutableList<T>.removeFirstOrNull(predicate: (T) -> Boolean): T? {
+        val value = this.firstOrNull(predicate)
+        value?.let(::remove)
+        return value
+    }
+
+    operator fun get(x: Int, y: Int): MutableList<Int> {
+        return possibilities.getOrPut(x to y) {
+            val canBe = (1..9).toMutableList()
+            canBe.removeDefinite(getRowDefinite(y).values)
+            canBe.removeDefinite(getColumnDefinite(x).values)
+            canBe.removeDefinite(getSquareOfDefinite(x, y).values)
+            object : ArrayList<Int>(canBe) {
+                override fun remove(element: Int): Boolean {
+                    val toReturn = super.remove(element)
+                    possibilities.remove(x to y)
+                    return toReturn
+                }
             }
         }
     }
 
-    fun getSquareOf(x: Int, y: Int) = getSquare(
-        x.floorDiv(squareSideLength),
-        y.floorDiv(squareSideLength)
-    )
-
-    private fun solveObvious(): Boolean {
+    fun solveOnlyOption(): Boolean {
+        println("New iteration of only option")
         var modified = false
-        baseNCounter(sideLength, 2)
-            .filter { (x, y) -> numbers[y][x] == null }
-            .forEach { (x, y) ->
-                val possibilities = getPossibilities(x, y)
-                if (possibilities.size == 1) {
-                    val option = possibilities.first()
-                    println("($x, $y) can only be $option")
-                    numbers[y][x] = option
+        val collections = getCollections()
+        for (collection in collections) {
+            for (i in 1..9) {
+                val candidates = collection.filterValues { it.contains(i) && it.size != 1 }
+                if (candidates.size == 1) {
+                    candidates.values.first().removeIf { it != i }
                     modified = true
-                }
-            }
-        return modified
-    }
-
-    private fun isValid(): Boolean {
-        if ((0..<sideLength)
-                .map { getRow(it).toSet() }
-                .any { it.size != sideLength }) return false
-        if ((0..<sideLength)
-                .map { getColumn(it).toSet() }
-                .any { it.size != sideLength }) return false
-        return baseNCounter(squareSideLength, 2)
-            .map { (x, y) -> getSquare(x, y).toSet() }
-            .all { it.size != sideLength }
-    }
-
-    private fun copy(): Grid {
-        return Grid(numbers.map { it.copyOf() }.toTypedArray())
-    }
-
-    private fun getPossibilities(x: Int, y: Int): List<Int> {
-        numbers[y][x]?.let { return listOf(it) }
-        val possibilities = (1..sideLength).toMutableList()
-        getRow(y).forEach(possibilities::remove)
-        getColumn(x).forEach(possibilities::remove)
-        getSquareOf(x, y).forEach(possibilities::remove)
-        return possibilities
-    }
-
-    private fun solveOnlyOption(): Boolean {
-        var modified = false
-        // Get all collections (rows, columns, squares)
-        val rows = (0..<sideLength).map { getRow(it).reverseAssociateWithIndexed { i, _ -> it to i } }
-        val columns = (0..<sideLength).map { getColumn(it).reverseAssociateWithIndexed { i, _ -> i to it } }
-        val squareRange = 0..<squareSideLength
-        val squares = permute(squareRange, squareRange).map { (x, y) -> getSquare(x, y).reverseAssociateWithIndexed { i, _ ->
-            val xOffset = i.floorDiv(squareSideLength)
-            val yOffset = i % squareSideLength
-            x * squareSideLength + xOffset to y * squareSideLength + yOffset
-        } }
-        val collections = rows + columns + squares
-        // Analyse each collection
-        collections.forEach { collection ->
-            val possibilities = collection.mapValues { getPossibilities(it.key.first, it.key.second) }
-            for (value in 1..sideLength) {
-                val canBeThis = possibilities.filterValues { value in it }
-                if (canBeThis.size == 1) {
-                    val key = canBeThis.keys.first()
-                    val x = key.first
-                    val y = key.second
-                    if (numbers[y][x] == null) {
-                        numbers[y][x] = value
-                        println("solveOnlyOption: ($x, $y) is the only candidate for $value")
-                        modified = true
-                    }
+                    val location = candidates.keys.first()
+                    println("Only option: $location is the only candidate for $i")
                 }
             }
         }
@@ -119,30 +84,17 @@ class Grid(private val numbers: Array<Array<Int?>>) {
     }
 
     fun solve() {
-        // TODO: Look for pairs and triples, i.e. these two are 1 and 8 so no others can be 1 or 8
-        while (solveObvious() || solveOnlyOption()) { continue }
-        println(this)
-        solveIterative()
+        while (solveOnlyOption()) { continue }
     }
 
-    private fun solveIterative() {
-        val unknowns = baseNCounter(sideLength, 2)
-            .filter { (x, y) -> numbers[y][x] == null }
-            .map { (x, y) -> x to y }
-            .toList()
-        val possibilities = unknowns.associateWith { (x, y) -> getPossibilities(x, y) }
-        possibilities.forEach { println(it) }
-        println(possibilities.values.map { it.size.toULong() }.runningFold(1uL, ULong::times))
-        val predictedCount = possibilities.values.map { it.size.toULong() }.fold(1uL, ULong::times)
-        println("Probably checking $predictedCount permutations")
-        val permutations = permute(*possibilities.values.toTypedArray()).map { mapOf(*unknowns.zip(it).toTypedArray()) }
-        for (permutation in permutations) {
-            val gridCopy = copy()
-            permutation.forEach { (x, y), value -> gridCopy.numbers[y][x] = value }
-            if (gridCopy.isValid()) {
-                println("Found working permutation: $permutation")
-                break
+    fun show() {
+        for (y in 0..8) {
+            for (x in 0..8) {
+                val options = this[x, y]
+                val value = if (options.size == 1) options.first().toString() else " "
+                print(value)
             }
+            println()
         }
     }
 }
