@@ -86,8 +86,63 @@ class Grid(private val numbers: Array<Array<Int?>>) {
         return possibilities
     }
 
+    private fun solveOnlyOption(): Boolean {
+        var modified = false
+        // Get all collections (rows, columns, squares)
+        val rows = (0..<sideLength).map { getRow(it).reverseAssociateWithIndexed { i, _ -> it to i } }
+        val columns = (0..<sideLength).map { getColumn(it).reverseAssociateWithIndexed { i, _ -> i to it } }
+        val squareRange = 0..<squareSideLength
+        val squares = permute(squareRange, squareRange).map { (x, y) -> getSquare(x, y).reverseAssociateWithIndexed { i, _ ->
+            val xOffset = i.floorDiv(squareSideLength)
+            val yOffset = i % squareSideLength
+            x * squareSideLength + xOffset to y * squareSideLength + yOffset
+        } }
+        val collections = rows + columns + squares
+        // Analyse each collection
+        collections.forEach { collection ->
+            val possibilities = collection.mapValues { getPossibilities(it.key.first, it.key.second) }
+            for (value in 1..sideLength) {
+                val canBeThis = possibilities.filterValues { value in it }
+                if (canBeThis.size == 1) {
+                    val key = canBeThis.keys.first()
+                    val x = key.first
+                    val y = key.second
+                    if (numbers[y][x] == null) {
+                        numbers[y][x] = value
+                        println("solveOnlyOption: ($x, $y) is the only candidate for $value")
+                        modified = true
+                    }
+                }
+            }
+        }
+        return modified
+    }
+
     fun solve() {
-        while (solveObvious()) { continue }
+        // TODO: Look for pairs and triples, i.e. these two are 1 and 8 so no others can be 1 or 8
+        while (solveObvious() || solveOnlyOption()) { continue }
         println(this)
+        solveIterative()
+    }
+
+    private fun solveIterative() {
+        val unknowns = baseNCounter(sideLength, 2)
+            .filter { (x, y) -> numbers[y][x] == null }
+            .map { (x, y) -> x to y }
+            .toList()
+        val possibilities = unknowns.associateWith { (x, y) -> getPossibilities(x, y) }
+        possibilities.forEach { println(it) }
+        println(possibilities.values.map { it.size.toULong() }.runningFold(1uL, ULong::times))
+        val predictedCount = possibilities.values.map { it.size.toULong() }.fold(1uL, ULong::times)
+        println("Probably checking $predictedCount permutations")
+        val permutations = permute(*possibilities.values.toTypedArray()).map { mapOf(*unknowns.zip(it).toTypedArray()) }
+        for (permutation in permutations) {
+            val gridCopy = copy()
+            permutation.forEach { (x, y), value -> gridCopy.numbers[y][x] = value }
+            if (gridCopy.isValid()) {
+                println("Found working permutation: $permutation")
+                break
+            }
+        }
     }
 }
