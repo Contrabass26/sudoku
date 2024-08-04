@@ -10,7 +10,7 @@ class Grid {
         map[pair] = value
     }
 
-    val get = CoordinateFunction { pair -> map[pair]!! }
+    val get = CoordinateFunction { pair -> map[pair] }
 
     fun getRow(y: Int): List<Pair<Int, Int>> {
         return (0..8).map { it to y }
@@ -25,9 +25,8 @@ class Grid {
     fun getColumns() = (0..8).map { getColumn(it) }
 
     val getDefinite = CoordinateFunction { x, y ->
-        if (x to y !in map) return@CoordinateFunction null
         val options = get(x, y)
-        if (options.size == 1) options.first() else null
+        if (options?.size == 1) options.first() else null
     }
 
     val contains = CoordinateFunction(map::contains)
@@ -46,7 +45,7 @@ class Grid {
 
     fun getCollections() = getRows() + getColumns() + getSquares()
 
-    fun getValuedCollections() = getCollections().map { collection -> collection.associateWith { get(it) } }
+    fun getValuedCollections() = getCollections().map { collection -> collection.associateWith { get(it)!! } }
 
     val getAffected = CoordinateFunction { x, y ->
         listOf(

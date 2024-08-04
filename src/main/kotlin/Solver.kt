@@ -12,14 +12,24 @@ class Solver(known: Map<Pair<Int, Int>, Int>) {
     }
 
     fun calculateIndefinite() {
-        Grid.locations().filter { !grid.contains(it) || grid.get(it).size != 1 }.forEach { pair ->
-            val candidates = (1..9).toMutableList()
-            val toRemove = grid
-                .getAffected(pair.first, pair.second)
-                .mapNotNull { (x, y) -> grid.getDefinite(x, y) }
-                .toSet()
-            candidates.removeAll(toRemove)
-            grid.set(pair, candidates)
+        var modified = true
+        while (modified) {
+            modified = false
+            Grid.locations().associateWith { grid.get(it) }.filterValues { it?.size != 1 }.forEach { (pair, current) ->
+                val candidates = (1..9).toMutableList()
+                val toRemove = grid
+                    .getAffected(pair.first, pair.second)
+                    .mapNotNull { (x, y) -> grid.getDefinite(x, y) }
+                    .toSet()
+                candidates.removeAll(toRemove)
+                if (current != candidates) {
+                    // Only replace if the new list is shorter (or it's the only option)
+                    if (current == null || candidates.size < current.size) {
+                        modified = true
+                        grid.set(pair, candidates)
+                    }
+                }
+            }
         }
     }
 
@@ -37,7 +47,7 @@ class Solver(known: Map<Pair<Int, Int>, Int>) {
                         candidate.value.removeIf { it != i }
                         modified = true
                         grid.getAffected(candidate.key)
-                            .map { grid.get(it) }
+                            .map { grid.get(it)!! }
                             .forEach { it.remove(i) }
                         println("Only option: ${candidate.key} is the only candidate for $i")
                     }
@@ -89,7 +99,7 @@ class Solver(known: Map<Pair<Int, Int>, Int>) {
         for (y in 0..8) {
             for (x in 0..8) {
                 val options = grid.get(x, y)
-                val value = if (options.size == 1) options.first().toString() else " "
+                val value = if (options?.size == 1) options.first().toString() else " "
                 print(value)
             }
             println()
