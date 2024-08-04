@@ -18,7 +18,7 @@ fun main() {
                 .use { writer -> writer.write(it) }
         }
     }
-    val known = mutableMapOf<Pair<Int, Int>, Int>()
+    val known = mutableMapOf<Coordinate, Int>()
     gridStr.forEachIndexed { i, c ->
         if (c == ' ') return@forEachIndexed
         val x = i % 9

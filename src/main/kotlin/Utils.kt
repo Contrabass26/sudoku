@@ -1,3 +1,7 @@
+typealias Coordinate = Pair<Int, Int>
+typealias Possibilities = MutableList<Int>
+typealias ValuedCollection = Map<Coordinate, Possibilities>
+
 inline fun <reified T> repeatedArray(element: T, length: Int): Array<T> {
     return sequence {
         for (i in 1..length) {

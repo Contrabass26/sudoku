@@ -1,4 +1,4 @@
-class Solver(known: Map<Pair<Int, Int>, Int>) {
+class Solver(known: Map<Coordinate, Int>) {
 
     private val grid = Grid()
 
