@@ -1,100 +1,58 @@
-class Grid(vararg knownValues: Pair<Pair<Int, Int>, Int>) {
+class Grid {
 
-    private val possibilities = mutableMapOf<Pair<Int, Int>, MutableList<Int>>()
+    private val map = mutableMapOf<Pair<Int, Int>, MutableList<Int>>()
 
-    init {
-        knownValues.forEach { (key, value) -> possibilities[key] = mutableListOf(value) }
+    companion object {
+        fun locations() = permute(0..8, 0..8).map { (x, y) -> x to y }
     }
 
-    fun getRow(y: Int) = (0..8)
-        .map { it to y }
-        .associateWith { (x, y) -> this[x, y] }
+    val set = CoordinateConsumer<MutableList<Int>> { pair, value ->
+        map[pair] = value
+    }
 
-    fun getRowDefinite(y: Int) = possibilities.filterKeys { (_, y1) -> y1 == y }
+    val get = CoordinateFunction { pair -> map[pair]!! }
+
+    fun getRow(y: Int): List<Pair<Int, Int>> {
+        return (0..8).map { it to y }
+    }
+
+    fun getColumn(x: Int): List<Pair<Int, Int>> {
+        return (0..8).map { x to it }
+    }
 
     fun getRows() = (0..8).map { getRow(it) }
 
-    fun getColumn(x: Int) = (0..8)
-        .map { x to it }
-        .associateWith { (x, y) -> this[x, y] }
-
-    fun getColumnDefinite(x: Int) = possibilities.filterKeys { (x1, _) -> x1 == x }
-
     fun getColumns() = (0..8).map { getColumn(it) }
 
-    fun getSquare(x: Int, y: Int) = permute(0..2, 0..2)
-        .map { (x1, y1) -> (x * 3 + x1) to (y * 3 + y1) }
-        .associateWith { (x, y) -> this[x, y] }
-
-    fun getSquareDefinite(x: Int, y: Int) = possibilities.filterKeys { (x1, y1) -> x1.floorDiv(3) == x && y1.floorDiv(3) == y }
-
-    fun getSquareOf(x: Int, y: Int) = getSquare(x.floorDiv(3), y.floorDiv(3))
-
-    fun getSquareOfDefinite(x: Int, y: Int) = getSquareDefinite(x.floorDiv(3), y.floorDiv(3))
-
-    fun getSquares() = permute(0..2, 0..2).map { (x, y) -> getSquare(x, y) }
-
-    private fun getCollections() = getRows() + getColumns() + getSquares()
-
-    private fun MutableList<Int>.removeDefinite(values: Iterable<Iterable<Int>>) {
-        this.removeAll(values
-            .filter { it.count() == 1 }
-            .map { it.first() }
-        )
+    val getDefinite = CoordinateFunction { x, y ->
+        if (x to y !in map) return@CoordinateFunction null
+        val options = get(x, y)
+        if (options.size == 1) options.first() else null
     }
 
-    private fun <T> MutableList<T>.removeFirstOrNull(predicate: (T) -> Boolean): T? {
-        val value = this.firstOrNull(predicate)
-        value?.let(::remove)
-        return value
+    val contains = CoordinateFunction(map::contains)
+
+    val getSquare = CoordinateFunction { x, y ->
+        permute(0..2, 0..2)
+            .map { (x1, y1) -> (x * 3 + x1) to (y * 3 + y1) }
+            .toList()
     }
 
-    operator fun get(x: Int, y: Int): MutableList<Int> {
-        return possibilities.getOrPut(x to y) {
-            val canBe = (1..9).toMutableList()
-            canBe.removeDefinite(getRowDefinite(y).values)
-            canBe.removeDefinite(getColumnDefinite(x).values)
-            canBe.removeDefinite(getSquareOfDefinite(x, y).values)
-            object : ArrayList<Int>(canBe) {
-                override fun remove(element: Int): Boolean {
-                    val toReturn = super.remove(element)
-                    possibilities.remove(x to y)
-                    return toReturn
-                }
-            }
-        }
+    val getSquareOf = CoordinateFunction { x, y ->
+        getSquare(x.floorDiv(3), y.floorDiv(3))
     }
 
-    fun solveOnlyOption(): Boolean {
-        println("New iteration of only option")
-        var modified = false
-        val collections = getCollections()
-        for (collection in collections) {
-            for (i in 1..9) {
-                val candidates = collection.filterValues { it.contains(i) && it.size != 1 }
-                if (candidates.size == 1) {
-                    candidates.values.first().removeIf { it != i }
-                    modified = true
-                    val location = candidates.keys.first()
-                    println("Only option: $location is the only candidate for $i")
-                }
-            }
-        }
-        return modified
-    }
+    fun getSquares() = permute(0..2, 0..2).map { (x, y) -> getSquare(x, y) }.toList()
 
-    fun solve() {
-        while (solveOnlyOption()) { continue }
-    }
+    fun getCollections() = getRows() + getColumns() + getSquares()
 
-    fun show() {
-        for (y in 0..8) {
-            for (x in 0..8) {
-                val options = this[x, y]
-                val value = if (options.size == 1) options.first().toString() else " "
-                print(value)
-            }
-            println()
-        }
+    fun getValuedCollections() = getCollections().map { collection -> collection.associateWith { get(it) } }
+
+    val getAffected = CoordinateFunction { x, y ->
+        listOf(
+            getRow(y),
+            getColumn(x),
+            getSquareOf(x, y)
+        ).foldToSet().toList() - (x to y)
     }
 }

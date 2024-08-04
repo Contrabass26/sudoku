@@ -31,31 +31,15 @@ fun <T> permute(vararg iterables: Iterable<T>) = object : Iterator<List<T>> {
     }
 }.asSequence()
 
-fun baseNCounter(base: Int, digits: Int) = permute(*repeatedArray(0..<base, digits))
-
-fun <T, R> Sequence<T>.associateWithIndexed(valueFunction: (Int, T) -> R): Map<T, R> {
-    val map = mutableMapOf<T, R>()
-    forEachIndexed { i, key ->
-        val value = valueFunction(i, key)
-        map[key] = value
-    }
-    return map
+fun <T> MutableList<T>.removeFirstOrNull(predicate: (T) -> Boolean): T? {
+    val value = this.firstOrNull(predicate)
+    value?.let(::remove)
+    return value
 }
 
-fun <T, R> Sequence<T>.reverseAssociateWithIndexed(keyFunction: (Int, T) -> R): Map<R, T> {
-    val map = mutableMapOf<R, T>()
-    forEachIndexed { i, value ->
-        val key = keyFunction(i, value)
-        map[key] = value
-    }
-    return map
+fun <T> Iterable<Iterable<T>>.foldToSet() = fold(mutableSetOf<T>()) { set, additives ->
+    set.addAll(additives)
+    set
 }
 
-fun <T, R> Sequence<T>.reverseAssociateWith(keyFunction: (T) -> R): Map<R, T> {
-    val map = mutableMapOf<R, T>()
-    forEach {
-        val key = keyFunction(it)
-        map[key] = it
-    }
-    return map
-}
+fun <T> Iterable<T>.containsAny(other: Iterable<T>) = other.any { contains(it) }

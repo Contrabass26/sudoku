@@ -1,30 +1,32 @@
+import java.io.BufferedReader
+import java.io.BufferedWriter
+import java.io.File
+import java.io.FileReader
+import java.io.FileWriter
+
 fun main() {
-    val grid = Grid(
-        0 to 0 to 6,
-        1 to 1 to 5,
-        2 to 1 to 7,
-        6 to 1 to 8,
-        3 to 2 to 1,
-        5 to 2 to 4,
-        7 to 2 to 9,
-        0 to 3 to 4,
-        1 to 3 to 1,
-        4 to 3 to 9,
-        5 to 4 to 3,
-        7 to 4 to 7,
-        1 to 5 to 9,
-        2 to 5 to 8,
-        3 to 6 to 4,
-        6 to 6 to 5,
-        7 to 6 to 6,
-        5 to 7 to 8,
-        6 to 7 to 3,
-        3 to 8 to 3,
-        4 to 8 to 1,
-        5 to 8 to 7,
-        8 to 8 to 4
-    )
-    println(grid[0, 0])
-    grid.solve()
-    grid.show()
+    // Get grid
+    val cacheFile = File("grid_cache.txt")
+    val gridStr = if (cacheFile.exists()) {
+        println("Using grid cache")
+        BufferedReader(FileReader(cacheFile))
+            .use { it.readLine() }
+    } else {
+        print("Enter grid: ")
+        readln().also {
+            BufferedWriter(FileWriter(cacheFile))
+                .use { writer -> writer.write(it) }
+        }
+    }
+    val known = mutableMapOf<Pair<Int, Int>, Int>()
+    gridStr.forEachIndexed { i, c ->
+        if (c == ' ') return@forEachIndexed
+        val x = i % 9
+        val y = i.floorDiv(9)
+        known[x to y] = c.digitToInt()
+    }
+    // Solve
+    val solver = Solver(known)
+    solver.solve()
+    solver.show()
 }
