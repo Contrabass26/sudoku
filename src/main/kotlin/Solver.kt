@@ -17,8 +17,8 @@ class Solver(known: Map<Coordinate, Int>) {
             modified = false
             Grid.locations().associateWith { grid.get(it) }.filterValues { it?.size != 1 }.forEach { (pair, current) ->
                 val candidates = (1..9).toMutableList()
-                val toRemove = grid
-                    .getAffected(pair.first, pair.second)
+                val toRemove = SquareCollection
+                    .affectedBy(pair.first, pair.second)
                     .mapNotNull { (x, y) -> grid.getDefinite(x, y) }
                     .toSet()
                 candidates.removeAll(toRemove)
@@ -36,20 +36,37 @@ class Solver(known: Map<Coordinate, Int>) {
     fun solveOnlyOption(): Boolean {
         println("New iteration of only option")
         var modified = false
-        val collections = grid.getValuedCollections()
+        val collections = SquareCollection.all()
         for (collection in collections) {
             for (i in 1..9) {
                 // Get cells that could be i
-                val candidates = collection.filterValues { it.contains(i) }
+                val candidates = collection.associateWith { grid.get(it)!! }.filterValues { it.contains(i) }
                 if (candidates.size == 1) {
                     val candidate = candidates.entries.first()
                     if (candidate.value.size != 1) { // Make sure it's not already certain
                         candidate.value.removeIf { it != i }
                         modified = true
-                        grid.getAffected(candidate.key)
+                        SquareCollection.affectedBy(candidate.key)
                             .map { grid.get(it)!! }
                             .forEach { it.remove(i) }
                         println("Only option: ${candidate.key} is the only candidate for $i")
+                    }
+                } else if (candidates.isNotEmpty()) {
+                    // Do the candidates share multiple collections?
+                    val otherCollection = candidates.keys
+                        .map { (x, y) -> SquareCollection.containing(x, y).toList().filterNot { it == collection } }
+                        .intersect()
+                        .firstOrNull()
+                    if (otherCollection != null) {
+                        // Remove i from all other members of this collection
+                        val toRemoveFrom = otherCollection.filter { it !in candidates.keys && i in grid.get(it)!! }
+                        if (toRemoveFrom.isNotEmpty()) {
+                            println("Only option: ${candidates.keys} are also all in $otherCollection")
+                            modified = true
+                            toRemoveFrom
+                                .map { grid.get(it)!! }
+                                .forEach { it.remove(i) }
+                        }
                     }
                 }
             }

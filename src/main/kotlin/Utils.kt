@@ -1,3 +1,5 @@
+import java.util.function.Predicate
+
 typealias Coordinate = Pair<Int, Int>
 typealias Possibilities = MutableList<Int>
 
@@ -46,3 +48,14 @@ fun <T> Iterable<Iterable<T>>.foldToSet() = fold(mutableSetOf<T>()) { set, addit
 }
 
 fun <T> Iterable<T>.containsAny(other: Iterable<T>) = other.any { contains(it) }
+
+fun <T> Iterable<Iterable<T>>.intersect() = this.fold(this.first()) { a, b -> a.intersect(b.toSet()) }
+
+fun <T : Comparable<T>> max(vararg values: T) = values.max()
+
+fun <T> Iterable<T>.windowedPairsCircular(): List<List<T>> {
+    val lists = windowed(2).toMutableList()
+    val extra = listOf(last(), first())
+    lists.add(extra)
+    return lists
+}

@@ -12,24 +12,21 @@ import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import java.io.File
 import javax.imageio.ImageIO
-import kotlin.math.abs
-import kotlin.math.cos
-import kotlin.math.roundToInt
-import kotlin.math.sin
+import kotlin.math.*
 
 const val WHITE_THRESHOLD = 128
-const val SCALE_FACTOR = 0.1
 
 fun main() {
     val inImage = ImageIO.read(File("recognition/in.jpg"))
     // Scale
+    val sf = 400.0 / min(inImage.width, inImage.height)
     val scaledImage = BufferedImage(
-        (inImage.width * SCALE_FACTOR).toInt(),
-        (inImage.height * SCALE_FACTOR).toInt(),
+        (inImage.width * sf).toInt(),
+        (inImage.height * sf).toInt(),
         BufferedImage.TYPE_INT_RGB
     )
     val graphics = scaledImage.graphics as Graphics2D
-    graphics.drawImage(inImage, AffineTransform.getScaleInstance(SCALE_FACTOR, SCALE_FACTOR), null)
+    graphics.drawImage(inImage, AffineTransform.getScaleInstance(sf, sf), null)
     // Black and white
     val bwImage = BufferedImage(scaledImage.width, scaledImage.height, BufferedImage.TYPE_INT_RGB)
     permute(0..<scaledImage.width, 0..<scaledImage.height).forEach { (x, y) ->
@@ -44,34 +41,18 @@ fun main() {
         val color = bwImage.getRGB(x, y)
         if (color.and(0xff) == 1) return@forEach // Stop if white
         // For each degree
-        val scores = (0..<360 step 5).associateWith {
-            val radians = Math.toRadians(it.toDouble())
-            val xOffset = cos(radians)
-            val yOffset = sin(radians)
-            var xCurrent = x.toDouble()
-            var yCurrent = y.toDouble()
-            var steps = 0 // The number of black pixels in this direction (including original one)
-            var lastColor = color
-            while (lastColor and 0xff == 0 && steps < 10) {
-                xCurrent += xOffset
-                yCurrent += yOffset
-                if (xCurrent >= bwImage.width || yCurrent >= bwImage.height || xCurrent < 0 || yCurrent < 0) break
-                lastColor = bwImage.getRGB(xCurrent.roundToInt(), yCurrent.roundToInt())
-                steps++
-            }
-            steps
-        }
+        val scores = (0..<360 step 5).associateWith { getAngleScore(x, y, it, bwImage) }
         // If we stand out from a lot of angles, probably not good
         val average = scores.values.average()
-        if (average > 3) {
+        if (average > 4) {
             return@forEach
         }
         // Look for corners
         (0..<360)
             .filter { scores[it] == 10 }
             .filter { scores[it rot 90] == 10 }
-            .filter { scores[it rot 180] == 1 }
-            .filter { scores[it rot 270] == 1 }
+            .filter { scores[it rot 180] in 1..5 }
+            .filter { scores[it rot 270] in 1..5 }
             .forEach { corners.add(Triple(x, y, it)) }
     }
     // Sort corners into types
@@ -121,6 +102,30 @@ fun main() {
     srcCorners.deallocate()
     dstCorners.deallocate()
     opencv_imgcodecs.imwrite("recognition/final_cv.jpg", result)
+}
+
+private fun getAngleScore(
+    x: Int,
+    y: Int,
+    angle: Int,
+    image: BufferedImage
+): Int {
+    val color = image.getRGB(x, y)
+    val radians = Math.toRadians(angle.toDouble())
+    val xOffset = cos(radians)
+    val yOffset = sin(radians)
+    var xCurrent = x.toDouble()
+    var yCurrent = y.toDouble()
+    var steps = 0 // The number of black pixels in this direction (including original one)
+    var lastColor = color
+    while (lastColor and 0xff == 0 && steps < 10) {
+        xCurrent += xOffset
+        yCurrent += yOffset
+        if (xCurrent >= image.width || yCurrent >= image.height || xCurrent < 0 || yCurrent < 0) break
+        lastColor = image.getRGB(xCurrent.roundToInt(), yCurrent.roundToInt())
+        steps++
+    }
+    return steps
 }
 
 private infix fun Int.rot(degrees: Int) = (this + degrees) % 360
