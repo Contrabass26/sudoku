@@ -9,4 +9,4 @@ This program uses various methods to solve sukodus. Current methods used:
 
 ## Usage
 
-Clone the repo and run `Main.kt`. Enter your grid as a continuous string, left to right, top to bottom. Use spaces to indicate unknown cells.
+Clone the repo and run `Main.kt`. Enter your grid as a continuous string, left to right, top to bottom. Use spaces to indicate unknown cells. Once you input a grid once, it caches it for next time in `grid_cache.txt`. No need to enter manually every time!
