@@ -1,3 +1,7 @@
+package recognition
+
+import max
+import permute
 import java.awt.Color
 import java.awt.image.BufferedImage
 import java.awt.image.ConvolveOp
