@@ -18,6 +18,10 @@ dependencies {
 
     implementation("org.deeplearning4j:deeplearning4j-core:1.0.0-M2.1")
     implementation("org.nd4j:nd4j-native-platform:1.0.0-M2.1")
+
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.17.2")
+    implementation("com.fasterxml.jackson.core:jackson-annotations:2.17.2")
+    implementation("com.fasterxml.jackson.core:jackson-core:2.17.2")
 }
 
 tasks.test {

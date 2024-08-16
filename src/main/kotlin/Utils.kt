@@ -1,4 +1,6 @@
 import java.util.function.Predicate
+import kotlin.math.round
+import kotlin.math.roundToInt
 
 typealias Coordinate = Pair<Int, Int>
 typealias Possibilities = MutableList<Int>
@@ -58,4 +60,13 @@ fun <T> Iterable<T>.windowedPairsCircular(): List<List<T>> {
     val extra = listOf(last(), first())
     lists.add(extra)
     return lists
+}
+
+fun roundToNearest(n: Double, gap: Double): Double {
+    return (n / gap).roundToInt() * gap
+}
+
+fun <T> Iterable<T>.sample(proportion: Double): List<T> {
+    val count = (count() * proportion).roundToInt()
+    return shuffled().take(count)
 }
