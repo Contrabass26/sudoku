@@ -172,7 +172,7 @@ fun main() {
     save(model, data)
 }
 
-fun getImage(filename: String, hashes: MutableMap<String, Int>, orElse: () -> BufferedImage): BufferedImage {
+private fun getImage(filename: String, hashes: MutableMap<String, Int>, orElse: () -> BufferedImage): BufferedImage {
     val file = File(filename)
     if (file.exists()) {
         val hash = hashes[filename]
@@ -191,7 +191,7 @@ fun getImage(filename: String, hashes: MutableMap<String, Int>, orElse: () -> Bu
     return image
 }
 
-fun save(model: MultiLayerNetwork, data: Data) {
+private fun save(model: MultiLayerNetwork, data: Data) {
     println("Save")
     model.save(MODEL_FILE)
     data.save()

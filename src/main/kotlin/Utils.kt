@@ -1,5 +1,3 @@
-import java.util.function.Predicate
-import kotlin.math.round
 import kotlin.math.roundToInt
 
 typealias Coordinate = Pair<Int, Int>
@@ -70,3 +68,13 @@ fun <T> Iterable<T>.sample(proportion: Double): List<T> {
     val count = (count() * proportion).roundToInt()
     return shuffled().take(count)
 }
+
+inline fun <reified T> repeatedArray(length: Int, crossinline element: () -> T): Array<T> {
+    return sequence {
+        for (i in 1..length) {
+            this.yield(element())
+        }
+    }.toList().toTypedArray()
+}
+
+fun <T> Sequence<List<T>>.mapToPairs() = map { (a, b) -> a to b }

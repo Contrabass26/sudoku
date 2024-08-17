@@ -120,7 +120,7 @@ fun main() {
     println("Filtered: ${filtered.size}")
 }
 
-fun getGray(x: Int, y: Int): Double? {
+private fun getGray(x: Int, y: Int): Double? {
     return try {
         (image!!.getRGB(x, y) and 0xff) / 255.0
     }
